@@ -17,8 +17,8 @@
      httpx
      json
 ### Instalation
-Run ollama serve 
-make an init.py file containing the following:
-from bot import botinit
-botinit()
-run init.py
+    Run ollama serve 
+    make an init.py file containing the following:
+    from bot import botinit
+    botinit()
+    run init.py
