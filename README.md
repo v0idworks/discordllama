@@ -9,3 +9,16 @@
     turn messages into embed format
     model selector
     session selector
+### Pre-requisites
+     python3
+     discord.py
+     discord.ext
+     asyncio
+     httpx
+     json
+### Instalation
+Run ollama serve 
+make an init.py file containing the following:
+    from bot import botinit
+    botinit()
+run init.py
