@@ -19,6 +19,6 @@
 ### Instalation
 Run ollama serve 
 make an init.py file containing the following:
-    from bot import botinit
-    botinit()
+from bot import botinit
+botinit()
 run init.py
