@@ -118,6 +118,6 @@ async def shutdown(ctx):
     await ctx.send('Bye!')
     exit()
 @bot.command()
-async def add(ctx, number1=int, number2=int
+async def add(ctx, number1=int, number2=int):
     await ctx.send(number1+number2)
 bot.run('')
