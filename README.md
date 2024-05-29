@@ -2,7 +2,6 @@
 ## Semi-decent discord - ollama integration
 ### Features:
     asking your llama model
-    feedback from terminal(works once per ?ask command) for example timeout error, you can type "sorry the bot broke" and press enter
 ### TODO: 
     command to wipe history
     model selector
@@ -15,8 +14,6 @@
      httpx
      json
 ### Instalation
-    Run ollama serve 
-    make an init.py file containing the following:
-    from bot import botinit
-    botinit()
-    run init.py
+    insert your token, find an image and put it in the embed.
+    specify your desired model in data(make sure you ollama run it first.)
+    run ollama serve
