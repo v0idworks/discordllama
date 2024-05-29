@@ -1,13 +1,23 @@
 import discord
 from discord.ext import commands
-from discord.ext.commands import Bot
 import httpx
-import asyncio
 import json
 import random
+import os
 
-# Dictionary to store user histories
-user_histories = {}
+# Path to the file where user histories will be stored
+HISTORY_FILE = "conversations.json"
+
+# Load user histories from the file if it exists
+if os.path.exists(HISTORY_FILE):
+    with open(HISTORY_FILE, "r") as f:
+        conversations = json.load(f)
+else:
+    conversations = {}
+
+def save_history():
+    with open(HISTORY_FILE, "w") as f:
+        json.dump(conversations, f, indent=4)
 
 intents = discord.Intents.default()
 intents.members = True
@@ -20,14 +30,14 @@ async def on_ready():
     print('github.com/v0idworks/discordllama')
     await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="ваши вопросы."))
 
-@bot.command(description='спросить лламу3')
+@bot.command(description='ask ai')
 async def ask(ctx, *, question: str):
     await ctx.defer()  # anti-timeout bc shitty gpu
 
     user_id = str(ctx.author.id)
 
     # Retrieve the user's conversation history, or start a new one
-    history = user_histories.get(user_id, [])
+    history = conversations.get(user_id, [])
     
     # Add the user's current message to the conversation history
     history.append({
@@ -35,7 +45,7 @@ async def ask(ctx, *, question: str):
         "content": question
     })
 
-    data = { # shitty payload prompt hack because python wont accept it otherwise??
+    data = { # payload for prompt
         "model": "llama3",
         "messages": history,
         "stream": False 
@@ -52,24 +62,25 @@ async def ask(ctx, *, question: str):
             print(f"Raw response: {response_text}")  # Debugging: Print the raw response
             
             try:
-                # parsing json, "no content found" shouldnt appear under no circumstances but is there because why not.
+                # Attempt to find and parse the JSON part
                 start_index = response_text.find('{')
                 end_index = response_text.rfind('}') + 1
                 json_part = response_text[start_index:end_index]
                 response_data = json.loads(json_part)
                 content = response_data.get("message", {}).get("content", "No content found.")
                 
-                #Collect private user information(just kidding, also this will be wiped after restart.)
+                # Add the assistant's response to the conversation history
                 history.append({
                     "role": "assistant",
                     "content": content
                 })
                 
                 # Save the updated history
-                user_histories[user_id] = history
+                conversations[user_id] = history
+                save_history()
 
                 embed = discord.Embed(title="discordllama 1.1", url="https://github.com/v0idworks/discordllama", description="simple python script for integrating ollama as a discord bot", color=random.randint(0, 0xFFFFFF))
-                embed.set_author(name="v0idworks", url="https://github.com/v0idworks", icon_url="insert image here")
+                embed.set_author(name="v0idworks", url="https://github.com/v0idworks", icon_url="replacewithyourownicon")
                 embed.add_field(name="Response", value=content, inline=False)
             except json.JSONDecodeError as e:
                 content = f"Failed to parse JSON response: {str(e)}"
@@ -80,10 +91,25 @@ async def ask(ctx, *, question: str):
             await ctx.send('Timeout Error, ask for the ai to answer shorter')
             print('timeout error.')
         else:
-            await ctx.send(f"Server is angry, heres your http response: {exc.response.status_code}")
+            await ctx.send(f"Server is angry, here's your HTTP response: {exc.response.status_code}")
             print(f"http error: {exc.response.status_code}")
     except Exception as e:
-        await ctx.send(f"Epic fail, heres what caused the error: {str(e)}")
+        await ctx.send(f"Epic fail, here's what caused the error: {str(e)}")
         print(f"error: {str(e)}")
-bot.run('')
 
+@bot.command(description='clear all the ctrl+c & ctrl+v evidence')
+async def forget(ctx, user: discord.User = None):
+    if user is None:
+        user = ctx.author
+
+    user_id = str(user.id)
+    if user_id in conversations:
+        if ctx.author.id == user.id or await bot.is_owner(ctx.author):
+            del conversations[user_id]
+            save_history()
+            await ctx.send(f"I've forgotten anything that {user.mention} has said..")
+        else:
+            await ctx.send(f"You're not {user.mention}!")
+    else:
+        await ctx.send(f"{user.mention} hasn't said anything yet.")
+bot.run('')
