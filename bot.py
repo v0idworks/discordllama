@@ -35,7 +35,7 @@ async def ask(ctx, *, question: str):
         "content": question
     })
 
-    data = { # payload for prompt
+    data = { # shitty payload prompt hack because python wont accept it otherwise??
         "model": "llama3",
         "messages": history,
         "stream": False 
@@ -52,14 +52,14 @@ async def ask(ctx, *, question: str):
             print(f"Raw response: {response_text}")  # Debugging: Print the raw response
             
             try:
-                # Attempt to find and parse the JSON part
+                # parsing json, "no content found" shouldnt appear under no circumstances but is there because why not.
                 start_index = response_text.find('{')
                 end_index = response_text.rfind('}') + 1
                 json_part = response_text[start_index:end_index]
                 response_data = json.loads(json_part)
                 content = response_data.get("message", {}).get("content", "No content found.")
                 
-                # Add the assistant's response to the conversation history
+                #Collect private user information(just kidding, also this will be wiped after restart.)
                 history.append({
                     "role": "assistant",
                     "content": content
