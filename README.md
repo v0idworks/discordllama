@@ -1,9 +1,10 @@
 # discordllama
 ## Semi-decent discord - ollama integration
 ### Features:
-    asking your llama model
-    history in conversations
+    asking your llama model.
+    history in conversations.
     responds in embeds.
+    add two numbers together.
 ### TODO: 
     command to wipe history
     model selector
