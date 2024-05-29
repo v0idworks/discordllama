@@ -15,6 +15,7 @@
      asyncio
      httpx
      json
+     random
 ### Installation
     insert your token, find an image and put it in the embed.
     specify your desired model in data(make sure you ollama run it first.)
