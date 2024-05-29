@@ -80,7 +80,7 @@ async def ask(ctx, *, question: str):
                 save_history()
 
                 embed = discord.Embed(title="discordllama 1.1", url="https://github.com/v0idworks/discordllama", description="simple python script for integrating ollama as a discord bot", color=random.randint(0, 0xFFFFFF))
-                embed.set_author(name="v0idworks", url="https://github.com/v0idworks", icon_url="replacewithyourownicon")
+                embed.set_author(name="v0idworks", url="https://github.com/v0idworks", icon_url="")
                 embed.add_field(name="Response", value=content, inline=False)
             except json.JSONDecodeError as e:
                 content = f"Failed to parse JSON response: {str(e)}"
@@ -112,4 +112,12 @@ async def forget(ctx, user: discord.User = None):
             await ctx.send(f"You're not {user.mention}!")
     else:
         await ctx.send(f"{user.mention} hasn't said anything yet.")
+@bot.command(description="Attempting shutdown, Its not shutting down, Gordon, get away from there!")
+async def shutdown(ctx):
+    await bot.is_owner(ctx.author)
+    await ctx.send('Bye!')
+    exit()
+@bot.command()
+async def add(ctx, number1=int, number2=int
+    await ctx.send(number1+number2)
 bot.run('')
