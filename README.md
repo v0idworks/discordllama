@@ -2,6 +2,8 @@
 ## Semi-decent discord - ollama integration
 ### Features:
     asking your llama model
+    history in conversations(wipes every script restart)
+    responds in embeds.
 ### TODO: 
     command to wipe history
     model selector
