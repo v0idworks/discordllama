@@ -22,13 +22,13 @@ def save_history():
 intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
-bot = commands.Bot(command_prefix='?', description="cope and seethe ai", intents=intents)
+bot = commands.Bot(command_prefix='?', description="Simple Ollama discord bot wrapper with additional functions", intents=intents)
 
 @bot.event
 async def on_ready():
     print(f'Logged into {bot.user} (ID: {bot.user.id})')
     print('github.com/v0idworks/discordllama')
-    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="ваши вопросы."))
+    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="Your questions."))
 
 @bot.command(description='ask ai')
 async def ask(ctx, *, question: str):
@@ -62,7 +62,8 @@ async def ask(ctx, *, question: str):
             print(f"Raw response: {response_text}")  # Debugging: Print the raw response
             
             try:
-                # Attempt to find and parse the JSON part
+                #  Parse Json(answer from ollama)
+                # "No content found" should not appear unless they redo the api(which they won't) but i'll leave it here as a sanity check
                 start_index = response_text.find('{')
                 end_index = response_text.rfind('}') + 1
                 json_part = response_text[start_index:end_index]
@@ -96,8 +97,9 @@ async def ask(ctx, *, question: str):
     except Exception as e:
         await ctx.send(f"Epic fail, here's what caused the error: {str(e)}")
         print(f"error: {str(e)}")
-
-@bot.command(description='clear all the ctrl+c & ctrl+v evidence')
+#if ctx.author is the user whose history will be wiped, then wipe
+#else check if ctx.author is the owner of the bot.
+@bot.command(description="clear all the ctrl+c & ctrl+v evidence")
 async def forget(ctx, user: discord.User = None):
     if user is None:
         user = ctx.author
