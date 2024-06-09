@@ -21,3 +21,6 @@
     insert your token, find an image and put it in the embed.
     specify your desired model in data(make sure you ollama run it first.)
     run ollama serve
+
+# Milestones
+    40 git clones!🎉
