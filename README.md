@@ -5,8 +5,8 @@
     history in conversations.
     responds in embeds.
     add two numbers together.
+    Wipe history
 ### TODO: 
-    command to wipe history
     model selector
     session selector
 ### Pre-requisites
