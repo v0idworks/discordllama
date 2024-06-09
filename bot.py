@@ -6,6 +6,7 @@ import random
 import os
 
 # Path to the file where user histories will be stored
+# You can remove this line and just assign it in terminal, but i dont know why would you do this
 HISTORY_FILE = "conversations.json"
 
 # Load user histories from the file if it exists
