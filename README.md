@@ -23,4 +23,4 @@
     run ollama serve
 
 # Milestones
-    40 git clones!🎉
+    4 git clones!🎉
