@@ -1,44 +1,69 @@
 import discord
 from discord.ext import commands
+from discord.ui import Select, View
 import httpx
 import json
 import random
 import os
+import logging
 
-# Path to the file where user histories will be stored
-# You can remove this line and just assign it in terminal, but i dont know why would you do this
-HISTORY_FILE = "conversations.json"
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
 
+# Path to the file where user histories and sessions will be stored
+HISTORY_FILE = "user_histories.json"
+
+# Load user histories and sessions from the file if it exists
 # Load user histories from the file if it exists
 if os.path.exists(HISTORY_FILE):
-    with open(HISTORY_FILE, "r") as f:
-        conversations = json.load(f)
+    try:
+        with open(HISTORY_FILE, "r") as f:
+            user_histories = json.load(f)
+    except json.JSONDecodeError:
+        logging.error("Failed to decode JSON from history file. Initializing an empty history.")
+        user_histories = {}
 else:
-    conversations = {}
+    user_histories = {}
 
-def save_history():
+
+def save_histories():
+    logging.debug("Saving user histories to file.")
     with open(HISTORY_FILE, "w") as f:
-        json.dump(conversations, f, indent=4)
+        json.dump(user_histories, f, indent=4)
 
 intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
-bot = commands.Bot(command_prefix='?', description="Simple Ollama discord bot wrapper with additional functions", intents=intents)
+bot = commands.Bot(command_prefix='?', description="cope and seethe ai", intents=intents)
 
 @bot.event
 async def on_ready():
-    print(f'Logged into {bot.user} (ID: {bot.user.id})')
-    print('github.com/v0idworks/discordllama')
-    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="Your questions."))
+    logging.info(f'Logged into {bot.user} (ID: {bot.user.id})')
+    logging.info('github.com/v0idworks/discordllama')
+    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="ваши вопросы."))
 
-@bot.command(description='ask ai')
+def get_user_sessions(user_id):
+    """Retrieve a user's session list or create a new one."""
+    if user_id not in user_histories:
+        user_histories[user_id] = {"sessions": {}, "active_session": None}
+        save_histories()
+    return user_histories[user_id]
+
+@bot.command(description='спросить лламу3')
 async def ask(ctx, *, question: str):
+    logging.debug(f"Received question: {question}")
     await ctx.defer()  # anti-timeout bc shitty gpu
 
     user_id = str(ctx.author.id)
+    user_data = get_user_sessions(user_id)
+    active_session_id = user_data.get("active_session")
 
-    # Retrieve the user's conversation history, or start a new one
-    history = conversations.get(user_id, [])
+    if not active_session_id:
+        await ctx.send("Please select a session first using `?select_session`.")
+        return
+
+    # Retrieve the conversation history for the active session
+    history = user_data["sessions"].get(active_session_id, [])
     
     # Add the user's current message to the conversation history
     history.append({
@@ -46,7 +71,7 @@ async def ask(ctx, *, question: str):
         "content": question
     })
 
-    data = { # payload for prompt
+    data = {  # payload for prompt
         "model": "llama3",
         "messages": history,
         "stream": False 
@@ -60,11 +85,10 @@ async def ask(ctx, *, question: str):
             
             # Handle response as text
             response_text = response.text
-            print(f"Raw response: {response_text}")  # Debugging: Print the raw response
+            logging.debug(f"Raw response: {response_text}")  # Debugging: Print the raw response
             
             try:
-                #  Parse Json(answer from ollama)
-                # "No content found" should not appear unless they redo the api(which they won't) but i'll leave it here as a sanity check
+                # Attempt to find and parse the JSON part
                 start_index = response_text.find('{')
                 end_index = response_text.rfind('}') + 1
                 json_part = response_text[start_index:end_index]
@@ -78,49 +102,91 @@ async def ask(ctx, *, question: str):
                 })
                 
                 # Save the updated history
-                conversations[user_id] = history
-                save_history()
+                user_data["sessions"][active_session_id] = history
+                user_histories[user_id] = user_data
+                save_histories()
 
                 embed = discord.Embed(title="discordllama 1.1", url="https://github.com/v0idworks/discordllama", description="simple python script for integrating ollama as a discord bot", color=random.randint(0, 0xFFFFFF))
-                embed.set_author(name="v0idworks", url="https://github.com/v0idworks", icon_url="")
+                embed.set_author(name="v0idworks", url="https://github.com/v0idworks", icon_url="https://cdn.discordapp.com/app-assets/1243323068324249760/1243328165263441930.png")
                 embed.add_field(name="Response", value=content, inline=False)
             except json.JSONDecodeError as e:
                 content = f"Failed to parse JSON response: {str(e)}"
+                logging.error(content)
             
             await ctx.send(embed=embed)
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code == 500:
-            await ctx.send('Timeout Error, ask for the ai to answer shorter')
-            print('timeout error.')
+            await ctx.send('Timeout Error, ask for the AI to answer shorter')
+            logging.error('Timeout error.')
         else:
             await ctx.send(f"Server is angry, here's your HTTP response: {exc.response.status_code}")
-            print(f"http error: {exc.response.status_code}")
+            logging.error(f"http error: {exc.response.status_code}")
     except Exception as e:
         await ctx.send(f"Epic fail, here's what caused the error: {str(e)}")
-        print(f"error: {str(e)}")
-#if ctx.author is the user whose history will be wiped, then wipe
-#else check if ctx.author is the owner of the bot.
-@bot.command(description="clear all the ctrl+c & ctrl+v evidence")
-async def forget(ctx, user: discord.User = None):
-    if user is None:
-        user = ctx.author
+        logging.error(f"error: {str(e)}")
 
-    user_id = str(user.id)
-    if user_id in conversations:
-        if ctx.author.id == user.id or await bot.is_owner(ctx.author):
-            del conversations[user_id]
-            save_history()
-            await ctx.send(f"I've forgotten anything that {user.mention} has said..")
-        else:
-            await ctx.send(f"You're not {user.mention}!")
+@bot.command(description='Select a conversation session')
+async def select_session(ctx):
+    user_id = str(ctx.author.id)
+    user_data = get_user_sessions(user_id)
+
+    sessions = user_data["sessions"]
+    
+    if not sessions:
+        await ctx.send("You have no active sessions. Create one using `?create_session`.")
+        return
+    
+    # Create a dropdown select menu
+    options = [
+        discord.SelectOption(label=session_id, description=f"Session {idx + 1}")
+        for idx, session_id in enumerate(sessions)
+    ]
+
+    class SessionSelect(discord.ui.Select):
+        def __init__(self):
+            super().__init__(placeholder="Choose a session...", min_values=1, max_values=1, options=options)
+
+        async def callback(self, interaction: discord.Interaction):
+            # Update the active session for the user
+            selected_session = self.values[0]
+            user_data["active_session"] = selected_session
+            user_histories[user_id] = user_data
+            save_histories()
+            await interaction.response.send_message(f"Session `{selected_session}` is now active.")
+
+    view = View()
+    view.add_item(SessionSelect())
+
+    await ctx.send("Please select a session:", view=view)
+
+@bot.command(description='Create a new conversation session')
+async def create_session(ctx):
+    user_id = str(ctx.author.id)
+    user_data = get_user_sessions(user_id)
+    
+    # Generate a unique session ID
+    new_session_id = f"session_{len(user_data['sessions']) + 1}"
+    user_data["sessions"][new_session_id] = []
+    user_data["active_session"] = new_session_id
+    user_histories[user_id] = user_data
+    save_histories()
+
+    await ctx.send(f"Created and activated new session `{new_session_id}`.")
+
+@bot.command(description='Forget a session')
+async def forget_session(ctx, session_id: str):
+    user_id = str(ctx.author.id)
+    user_data = get_user_sessions(user_id)
+
+    if session_id in user_data["sessions"]:
+        del user_data["sessions"][session_id]
+        if user_data["active_session"] == session_id:
+            user_data["active_session"] = None
+        user_histories[user_id] = user_data
+        save_histories()
+        await ctx.send(f"Session `{session_id}` has been forgotten.")
     else:
-        await ctx.send(f"{user.mention} hasn't said anything yet.")
-@bot.command(description="Attempting shutdown, Its not shutting down, Gordon, get away from there!")
-async def shutdown(ctx):
-    await bot.is_owner(ctx.author)
-    await ctx.send('Bye!')
-    exit()
-@bot.command()
-async def add(ctx, number1=int, number2=int):
-    await ctx.send(number1+number2)
-bot.run('')
+        await ctx.send(f"Session `{session_id}` not found.")
+
+
+bot.run('tokengoezhere')
